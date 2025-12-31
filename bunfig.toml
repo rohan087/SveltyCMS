@@ -22,3 +22,8 @@ preload = ["./tests/bun/setup.ts"]
 "@types/*" = "./src/types/*"
 "@utils/*" = "./src/utils/*"
 "@widgets/*" = "./src/widgets/*"
+
+# Explicit aliases for .svelte.ts files that tests import
+"@stores/loadingStore.svelte" = "./src/stores/loadingStore.svelte.ts"
+"@stores/screenSizeStore.svelte" = "./src/stores/screenSizeStore.svelte.ts"
+"@stores/system/index" = "./src/stores/system/index.ts"
