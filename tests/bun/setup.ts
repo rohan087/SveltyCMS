@@ -189,7 +189,7 @@ mock.module('@sveltejs/kit', () => ({
 (globalThis as any).$props = () => ({});
 
 // Mock loadingStore.svelte.ts to prevent $state error
-const createLoadingStoreMock = () => {
+mock.module('@src/stores/loadingStore.svelte', () => {
 	const loadingOps = {
 		navigation: 'navigation',
 		dataFetch: 'data-fetch',
@@ -251,16 +251,10 @@ const createLoadingStoreMock = () => {
 		LoadingStore: MockLoadingStore,
 		globalLoadingStore: new MockLoadingStore() // for any direct consumers
 	};
-};
-
-// Mock using @src/stores path
-mock.module('@src/stores/loadingStore.svelte', createLoadingStoreMock);
-
-// Mock using @stores/ alias path (for tests that import from @stores/)
-mock.module('@stores/loadingStore.svelte', createLoadingStoreMock);
+});
 
 // Mock screenSizeStore.svelte.ts to prevent $state error
-const createScreenSizeMock = () => {
+mock.module('@src/stores/screenSizeStore.svelte', () => {
 	const ScreenSize = { XS: 'XS', SM: 'SM', MD: 'MD', LG: 'LG', XL: 'XL', XXL: '2XL' };
 
 	// Export getScreenSize function (not getScreenSizeName)
@@ -301,30 +295,3 @@ mock.module('@src/stores/screenSizeStore.svelte', createScreenSizeMock);
 
 // Mock using @stores/ alias path (for tests that import from @stores/)
 mock.module('@stores/screenSizeStore.svelte', createScreenSizeMock);
-
-// Mock system store for tests that import from @stores/system/index
-mock.module('@stores/system/index', () => {
-	// Return empty implementations - individual tests can override as needed
-	return {
-		updateServiceHealth: () => {},
-		setSystemState: () => {},
-		getSystemState: () => ({ overallState: 'READY', services: {}, performanceMetrics: { stateTransitions: [] } }),
-		isSystemReady: () => true,
-		resetSystemState: () => {},
-		startServiceInitialization: () => {},
-		isServiceHealthy: () => true
-	};
-});
-
-// Mock using @src/stores/system/index path
-mock.module('@src/stores/system/index', () => {
-	return {
-		updateServiceHealth: () => {},
-		setSystemState: () => {},
-		getSystemState: () => ({ overallState: 'READY', services: {}, performanceMetrics: { stateTransitions: [] } }),
-		isSystemReady: () => true,
-		resetSystemState: () => {},
-		startServiceInitialization: () => {},
-		isServiceHealthy: () => true
-	};
-});
