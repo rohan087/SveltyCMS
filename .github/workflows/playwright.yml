@@ -69,6 +69,8 @@ jobs:
 
       - name: Run Unit Tests
         run: bun run test:unit
+        env:
+          LOG_LEVELS: none  # Suppress logs during tests
 
   # ------------------------------------------------------------------
   # 2. Integration Tests (Requires Server + MongoDB)
@@ -252,8 +254,9 @@ jobs:
           echo "✅ Created config/private.test.ts"
 
       # Build production version for faster, optimized testing
-      - name: Build Production
-        run: bun run build
+      #Disabling Duplicate build commands in CI/CD
+      # - name: Build Production
+      #   run: bun run build
 
       # --- START PREVIEW SERVER (PORT 4173) ---
       - name: Start Preview Server
