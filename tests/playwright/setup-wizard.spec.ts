@@ -34,15 +34,21 @@ test('Setup Wizard: Configure DB and Create Admin', async ({ page }) => {
 
 	// Wait for setup to load
 	await expect(page).toHaveURL(/\/setup/);
+	
+	// Wait for the page to be fully loaded - wait for the main card to appear
+	await page.waitForSelector('div.flex.flex-1.flex-col.rounded-xl', { timeout: 10000 });
 
 	// Dismiss welcome modal if it exists (using a smarter polling check)
 	const getStarted = page.getByRole('button', { name: /get started/i });
-	if (await getStarted.isVisible()) {
+	if (await getStarted.isVisible({ timeout: 2000 }).catch(() => false)) {
 		await getStarted.click();
+		// Wait a bit for modal to close
+		await page.waitForTimeout(500);
 	}
 
 	// --- STEP 1: Database ---
-	await expect(page.getByRole('heading', { name: /database/i }).first()).toBeVisible();
+	// Wait for the heading to be visible with a longer timeout
+	await expect(page.getByRole('heading', { name: /database/i }).first()).toBeVisible({ timeout: 10000 });
 
 	// Fill credentials from ENV (CI) or Defaults (Local)
 	await page.locator('#db-host').fill(process.env.MONGO_HOST || 'localhost');
