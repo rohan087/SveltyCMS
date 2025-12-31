@@ -253,6 +253,71 @@ mock.module('@src/stores/loadingStore.svelte', () => {
 	};
 });
 
+// Mock using @stores/ alias path (for tests that import from @stores/loadingStore.svelte)
+mock.module('@stores/loadingStore.svelte', () => {
+	const loadingOps = {
+		navigation: 'navigation',
+		dataFetch: 'data-fetch',
+		authentication: 'authentication',
+		initialization: 'initialization',
+		imageUpload: 'image-upload',
+		formSubmission: 'form-submission',
+		configSave: 'config-save',
+		roleManagement: 'role-management',
+		permissionUpdate: 'permission-update',
+		tokenGeneration: 'token-generation',
+		collectionLoad: 'collection-load',
+		widgetInit: 'widget-init'
+	};
+
+	class MockLoadingStore {
+		isLoading = false;
+		loadingReason: string | null = null;
+		loadingStack = new Set<string>();
+
+		startLoading(reason: string) {
+			this.loadingStack.add(reason);
+			this.isLoading = true;
+			this.loadingReason = reason;
+		}
+		stopLoading(reason: string) {
+			this.loadingStack.delete(reason);
+			if (this.loadingStack.size === 0) {
+				this.isLoading = false;
+				this.loadingReason = null;
+			} else {
+				this.loadingReason = Array.from(this.loadingStack).pop() || null;
+			}
+		}
+		clearLoading() {
+			this.loadingStack.clear();
+			this.isLoading = false;
+			this.loadingReason = null;
+		}
+		isLoadingReason(reason: string) {
+			return this.loadingStack.has(reason);
+		}
+		async withLoading<T>(reason: string, operation: () => Promise<T>): Promise<T> {
+			this.startLoading(reason);
+			try {
+				const result = await operation();
+				return result;
+			} finally {
+				this.stopLoading(reason);
+			}
+		}
+		getStats() {
+			return { activeCount: this.loadingStack.size, reasons: Array.from(this.loadingStack) };
+		}
+	}
+
+	return {
+		loadingOperations: loadingOps,
+		LoadingStore: MockLoadingStore,
+		globalLoadingStore: new MockLoadingStore() // for any direct consumers
+	};
+});
+
 // Mock screenSizeStore.svelte.ts to prevent $state error
 mock.module('@src/stores/screenSizeStore.svelte', () => {
 	const ScreenSize = { XS: 'XS', SM: 'SM', MD: 'MD', LG: 'LG', XL: 'XL', XXL: '2XL' };
@@ -288,10 +353,40 @@ mock.module('@src/stores/screenSizeStore.svelte', () => {
 			isLargeScreen: false
 		}
 	};
-};
-
-// Mock using @src/stores path
-mock.module('@src/stores/screenSizeStore.svelte', createScreenSizeMock);
+});
 
 // Mock using @stores/ alias path (for tests that import from @stores/)
-mock.module('@stores/screenSizeStore.svelte', createScreenSizeMock);
+mock.module('@stores/screenSizeStore.svelte', () => {
+	const ScreenSize = { XS: 'XS', SM: 'SM', MD: 'MD', LG: 'LG', XL: 'XL', XXL: '2XL' };
+
+	const getScreenSize = (width: number): typeof ScreenSize[keyof typeof ScreenSize] => {
+		if (width < 640) return ScreenSize.XS;
+		if (width < 768) return ScreenSize.SM;
+		if (width < 1024) return ScreenSize.MD;
+		if (width < 1280) return ScreenSize.LG;
+		if (width < 1536) return ScreenSize.XL;
+		return ScreenSize.XXL;
+	};
+
+	return {
+		ScreenSize,
+		getScreenSize,
+		screenWidth: { value: 1024 },
+		screenHeight: { value: 768 },
+		screenSize: { value: 'LG' },
+		isMobile: { value: false },
+		isTablet: { value: false },
+		isDesktop: { value: true },
+		isLargeScreen: { value: false },
+		setupScreenSizeListener: () => () => {},
+		screen: {
+			width: 1024,
+			height: 768,
+			size: 'LG',
+			isMobile: false,
+			isTablet: false,
+			isDesktop: true,
+			isLargeScreen: false
+		}
+	};
+});
