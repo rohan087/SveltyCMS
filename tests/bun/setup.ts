@@ -24,24 +24,36 @@ mock.module('$app/environment', () => ({
 	version: 'test'
 }));
 
-// Mock logger.server.ts to prevent "cannot be imported in browser" error
+// Mock logger.ts using both alias paths
+const createMockLogger = () => ({
+	fatal: () => {},
+	error: () => {},
+	warn: () => {},
+	info: () => {},
+	debug: () => {},
+	trace: () => {},
+	channel: () => createMockLogger(),
+	dump: () => {}
+});
+
+// Mock logger.ts using @utils/logger alias
 mock.module('@utils/logger', () => ({
-	logger: {
-		fatal: () => {},
-		error: () => {},
-		warn: () => {},
-		info: () => {},
-		debug: () => {},
-		trace: () => {},
-		channel: () => ({
-			fatal: () => {},
-			error: () => {},
-			warn: () => {},
-			info: () => {},
-			debug: () => {},
-			trace: () => {}
-		})
-	}
+	logger: createMockLogger()
+}));
+
+// Mock logger.ts using @src/utils/logger path
+mock.module('@src/utils/logger', () => ({
+	logger: createMockLogger()
+}));
+
+// Mock logger.server.ts using @src/utils/logger.server path
+mock.module('@src/utils/logger.server', () => ({
+	logger: createMockLogger()
+}));
+
+// Mock logger.server.ts using @utils/logger.server alias
+mock.module('@utils/logger.server', () => ({
+	logger: createMockLogger()
 }));
 
 // Mock $app/stores
@@ -177,7 +189,7 @@ mock.module('@sveltejs/kit', () => ({
 (globalThis as any).$props = () => ({});
 
 // Mock loadingStore.svelte.ts to prevent $state error
-mock.module('@src/stores/loadingStore.svelte', () => {
+const createLoadingStoreMock = () => {
 	const loadingOps = {
 		navigation: 'navigation',
 		dataFetch: 'data-fetch',
@@ -239,10 +251,16 @@ mock.module('@src/stores/loadingStore.svelte', () => {
 		LoadingStore: MockLoadingStore,
 		globalLoadingStore: new MockLoadingStore() // for any direct consumers
 	};
-});
+};
+
+// Mock using @src/stores path
+mock.module('@src/stores/loadingStore.svelte', createLoadingStoreMock);
+
+// Mock using @stores/ alias path (for tests that import from @stores/)
+mock.module('@stores/loadingStore.svelte', createLoadingStoreMock);
 
 // Mock screenSizeStore.svelte.ts to prevent $state error
-mock.module('@src/stores/screenSizeStore.svelte', () => {
+const createScreenSizeMock = () => {
 	const ScreenSize = { XS: 'XS', SM: 'SM', MD: 'MD', LG: 'LG', XL: 'XL', XXL: '2XL' };
 
 	// Export getScreenSize function (not getScreenSizeName)
@@ -275,5 +293,38 @@ mock.module('@src/stores/screenSizeStore.svelte', () => {
 			isDesktop: true,
 			isLargeScreen: false
 		}
+	};
+};
+
+// Mock using @src/stores path
+mock.module('@src/stores/screenSizeStore.svelte', createScreenSizeMock);
+
+// Mock using @stores/ alias path (for tests that import from @stores/)
+mock.module('@stores/screenSizeStore.svelte', createScreenSizeMock);
+
+// Mock system store for tests that import from @stores/system/index
+mock.module('@stores/system/index', () => {
+	// Return empty implementations - individual tests can override as needed
+	return {
+		updateServiceHealth: () => {},
+		setSystemState: () => {},
+		getSystemState: () => ({ overallState: 'READY', services: {}, performanceMetrics: { stateTransitions: [] } }),
+		isSystemReady: () => true,
+		resetSystemState: () => {},
+		startServiceInitialization: () => {},
+		isServiceHealthy: () => true
+	};
+});
+
+// Mock using @src/stores/system/index path
+mock.module('@src/stores/system/index', () => {
+	return {
+		updateServiceHealth: () => {},
+		setSystemState: () => {},
+		getSystemState: () => ({ overallState: 'READY', services: {}, performanceMetrics: { stateTransitions: [] } }),
+		isSystemReady: () => true,
+		resetSystemState: () => {},
+		startServiceInitialization: () => {},
+		isServiceHealthy: () => true
 	};
 });
