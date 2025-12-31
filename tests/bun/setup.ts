@@ -18,14 +18,14 @@ import { mock } from 'bun:test';
 
 // Mock $app/environment
 mock.module('$app/environment', () => ({
-	browser: true,
+	browser: false,
 	building: false,
 	dev: true,
 	version: 'test'
 }));
 
 // Mock logger.server.ts to prevent "cannot be imported in browser" error
-mock.module('@src/utils/logger.server', () => ({
+mock.module('@utils/logger', () => ({
 	logger: {
 		fatal: () => {},
 		error: () => {},
