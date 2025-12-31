@@ -16,7 +16,8 @@
  */
 import { mock } from 'bun:test';
 
-// Mock $app/environment
+// CRITICAL: Mock $app/environment FIRST - must be before any other code
+// Try multiple path variations to ensure SvelteKit resolves it correctly
 mock.module('$app/environment', () => ({
 	browser: false,
 	building: false,
@@ -24,7 +25,22 @@ mock.module('$app/environment', () => ({
 	version: 'test'
 }));
 
-// Mock logger.ts using both alias paths
+// Also try SvelteKit's internal resolution paths
+mock.module('.svelte-kit/runtime/app/environment.js', () => ({
+	browser: false,
+	building: false,
+	dev: true,
+	version: 'test'
+}));
+
+mock.module('$app/environment.js', () => ({
+	browser: false,
+	building: false,
+	dev: true,
+	version: 'test'
+}));
+
+// Mock logger factory function
 const createMockLogger = () => ({
 	fatal: () => {},
 	error: () => {},
@@ -35,6 +51,21 @@ const createMockLogger = () => ({
 	channel: () => createMockLogger(),
 	dump: () => {}
 });
+
+// CRITICAL: Mock logger.ts using direct file paths to prevent it from importing $app/environment
+// This must be done before any code imports logger.ts
+// Try multiple path variations to ensure we catch all imports
+mock.module('src/utils/logger.ts', () => ({
+	logger: createMockLogger()
+}));
+
+mock.module('./src/utils/logger.ts', () => ({
+	logger: createMockLogger()
+}));
+
+mock.module('../src/utils/logger.ts', () => ({
+	logger: createMockLogger()
+}));
 
 // Mock logger.ts using @utils/logger alias
 mock.module('@utils/logger', () => ({
