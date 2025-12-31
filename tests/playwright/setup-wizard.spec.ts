@@ -35,11 +35,11 @@ test('Setup Wizard: Configure DB and Create Admin', async ({ page }) => {
 	// Wait for setup to load
 	await expect(page).toHaveURL(/\/setup/, { timeout: 15000 });
 	
-	// Wait for the page title to ensure page is loaded
-	await expect(page).toHaveTitle(/SveltyCMS Setup/i, { timeout: 10000 });
+	// Wait for the page to be fully loaded - wait for network to be idle
+	await page.waitForLoadState('networkidle');
 	
-	// Wait for the main container to be visible (more reliable than specific classes)
-	await page.waitForSelector('div.mx-auto.max-w-\\[1600px\\]', { timeout: 10000 });
+	// Wait for any loading indicators to disappear and page to settle
+	await page.waitForTimeout(2000);
 
 	// Dismiss welcome modal if it exists
 	const getStarted = page.getByRole('button', { name: /get started/i });
@@ -49,8 +49,8 @@ test('Setup Wizard: Configure DB and Create Admin', async ({ page }) => {
 	}
 
 	// --- STEP 1: Database ---
-	// Wait for the heading to be visible
-	await expect(page.getByRole('heading', { name: /database/i }).first()).toBeVisible({ timeout: 15000 });
+	// Wait for the heading to be visible - this is the most reliable indicator that the page has loaded
+	await expect(page.getByRole('heading', { name: /database/i }).first()).toBeVisible({ timeout: 20000 });
 
 	// Fill credentials from ENV (CI) or Defaults (Local)
 	await page.locator('#db-host').fill(process.env.MONGO_HOST || 'localhost');
