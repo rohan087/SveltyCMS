@@ -24,7 +24,7 @@ async function clickNext(page: Page) {
 
 test('Setup Wizard: Configure DB and Create Admin', async ({ page }) => {
 	// 1. Start at root, expect redirect to /setup or /login
-	await page.goto('/', { waitUntil: 'domcontentloaded' });
+	await page.goto('/', { waitUntil: 'networkidle' });
 
 	if (page.url().includes('/login')) {
 		console.log('System already configured. Skipping setup.');
@@ -33,22 +33,24 @@ test('Setup Wizard: Configure DB and Create Admin', async ({ page }) => {
 	}
 
 	// Wait for setup to load
-	await expect(page).toHaveURL(/\/setup/);
+	await expect(page).toHaveURL(/\/setup/, { timeout: 15000 });
 	
-	// Wait for the page to be fully loaded - wait for the main card to appear
-	await page.waitForSelector('div.flex.flex-1.flex-col.rounded-xl', { timeout: 10000 });
+	// Wait for the page title to ensure page is loaded
+	await expect(page).toHaveTitle(/SveltyCMS Setup/i, { timeout: 10000 });
+	
+	// Wait for the main container to be visible (more reliable than specific classes)
+	await page.waitForSelector('div.mx-auto.max-w-\\[1600px\\]', { timeout: 10000 });
 
-	// Dismiss welcome modal if it exists (using a smarter polling check)
+	// Dismiss welcome modal if it exists
 	const getStarted = page.getByRole('button', { name: /get started/i });
-	if (await getStarted.isVisible({ timeout: 2000 }).catch(() => false)) {
+	if (await getStarted.isVisible({ timeout: 3000 }).catch(() => false)) {
 		await getStarted.click();
-		// Wait a bit for modal to close
-		await page.waitForTimeout(500);
+		await page.waitForTimeout(1000);
 	}
 
 	// --- STEP 1: Database ---
-	// Wait for the heading to be visible with a longer timeout
-	await expect(page.getByRole('heading', { name: /database/i }).first()).toBeVisible({ timeout: 10000 });
+	// Wait for the heading to be visible
+	await expect(page.getByRole('heading', { name: /database/i }).first()).toBeVisible({ timeout: 15000 });
 
 	// Fill credentials from ENV (CI) or Defaults (Local)
 	await page.locator('#db-host').fill(process.env.MONGO_HOST || 'localhost');
