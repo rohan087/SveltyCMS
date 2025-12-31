@@ -23,6 +23,22 @@ async function clickNext(page: Page) {
 }
 
 test('Setup Wizard: Configure DB and Create Admin', async ({ page }) => {
+	// Listen for console errors and page errors
+	const consoleErrors: string[] = [];
+	const pageErrors: string[] = [];
+	
+	page.on('console', (msg) => {
+		if (msg.type() === 'error') {
+			consoleErrors.push(msg.text());
+			console.log('Console error:', msg.text());
+		}
+	});
+	
+	page.on('pageerror', (error) => {
+		pageErrors.push(error.message);
+		console.log('Page error:', error.message);
+	});
+
 	// 1. Start at root, expect redirect to /setup or /login
 	await page.goto('/', { waitUntil: 'networkidle' });
 
@@ -41,6 +57,29 @@ test('Setup Wizard: Configure DB and Create Admin', async ({ page }) => {
 	// Wait for any loading indicators to disappear and page to settle
 	await page.waitForTimeout(2000);
 
+	// Debug: Check what's actually on the page
+	const pageContent = await page.content();
+	const hasHeading = pageContent.includes('Database') || pageContent.includes('database');
+	const hasSetupContent = pageContent.includes('setup') || pageContent.includes('Setup');
+	
+	console.log('Page URL:', page.url());
+	console.log('Page has "Database" text:', hasHeading);
+	console.log('Page has "Setup" text:', hasSetupContent);
+	console.log('Page title:', await page.title());
+	
+	// Check for any visible headings
+	const allHeadings = await page.locator('h1, h2, h3').all();
+	console.log(`Found ${allHeadings.length} headings on page`);
+	for (let i = 0; i < Math.min(allHeadings.length, 5); i++) {
+		const text = await allHeadings[i].textContent();
+		console.log(`Heading ${i + 1}:`, text);
+	}
+
+	// If there are errors, log them but continue
+	if (consoleErrors.length > 0 || pageErrors.length > 0) {
+		console.log('Errors found:', { consoleErrors, pageErrors });
+	}
+
 	// Dismiss welcome modal if it exists
 	const getStarted = page.getByRole('button', { name: /get started/i });
 	if (await getStarted.isVisible({ timeout: 3000 }).catch(() => false)) {
@@ -53,15 +92,27 @@ test('Setup Wizard: Configure DB and Create Admin', async ({ page }) => {
 	await expect(page.getByRole('heading', { name: /database/i }).first()).toBeVisible({ timeout: 20000 });
 
 	// Fill credentials from ENV (CI) or Defaults (Local)
-	await page.locator('#db-host').fill(process.env.MONGO_HOST || 'localhost');
-	await page.locator('#db-port').fill(process.env.MONGO_PORT || '27017');
-	await page.locator('#db-name').fill(process.env.MONGO_DB || 'SveltyCMS');
-	await page.locator('#db-user').fill(process.env.MONGO_USER || 'admin');
-	await page.locator('#db-password').fill(process.env.MONGO_PASS || 'admin');
+	await page.locator('#db-host').fill(process.env.MONGO_HOST || process.env.DB_HOST || 'localhost');
+	await page.locator('#db-port').fill(process.env.MONGO_PORT || process.env.DB_PORT || '27017');
+	await page.locator('#db-name').fill(process.env.MONGO_DB || process.env.DB_NAME || 'SveltyCMS');
+	// Use empty strings if DB_USER/DB_PASSWORD are not set (for MongoDB without auth)
+	await page.locator('#db-user').fill(process.env.MONGO_USER || process.env.DB_USER || '');
+	await page.locator('#db-password').fill(process.env.MONGO_PASS || process.env.DB_PASSWORD || '');
 
 	// Test Connection
 	await page.getByRole('button', { name: /test database/i }).click();
-	await expect(page.getByText(/connected successfully/i)).toBeVisible({ timeout: 15000 });
+	
+	// Wait for either success or error message
+	try {
+		await expect(page.getByText(/connected successfully/i)).toBeVisible({ timeout: 15000 });
+	} catch (error) {
+		// If success message not found, check for error message and log it
+		const errorText = await page.locator('text=/error|failed|authentication/i').first().textContent().catch(() => null);
+		const allText = await page.textContent('body').catch(() => '');
+		console.log('Database test failed. Error text found:', errorText);
+		console.log('Page content snippet:', allText?.substring(0, 500));
+		throw error;
+	}
 
 	// Move to next step
 	await clickNext(page);

@@ -15,30 +15,31 @@
  * Usage: Automatically loaded via package.json test scripts with --preload flag
  */
 import { mock } from 'bun:test';
+import { resolve } from 'path';
 
 // CRITICAL: Mock $app/environment FIRST - must be before any other code
-// Try multiple path variations to ensure SvelteKit resolves it correctly
-mock.module('$app/environment', () => ({
+// Register the mock synchronously and immediately
+const envMock = {
 	browser: false,
 	building: false,
 	dev: true,
 	version: 'test'
-}));
+};
+
+// Try multiple path variations to ensure SvelteKit resolves it correctly
+mock.module('$app/environment', () => envMock);
 
 // Also try SvelteKit's internal resolution paths
-mock.module('.svelte-kit/runtime/app/environment.js', () => ({
-	browser: false,
-	building: false,
-	dev: true,
-	version: 'test'
-}));
+mock.module('.svelte-kit/runtime/app/environment.js', () => envMock);
+mock.module('$app/environment.js', () => envMock);
 
-mock.module('$app/environment.js', () => ({
-	browser: false,
-	building: false,
-	dev: true,
-	version: 'test'
-}));
+// Try with absolute path from project root
+try {
+	const projectRoot = process.cwd();
+	mock.module(resolve(projectRoot, '.svelte-kit/runtime/app/environment.js'), () => envMock);
+} catch {
+	// Ignore if path resolution fails
+}
 
 // Mock logger factory function
 const createMockLogger = () => ({
@@ -54,18 +55,19 @@ const createMockLogger = () => ({
 
 // CRITICAL: Mock logger.ts using direct file paths to prevent it from importing $app/environment
 // This must be done before any code imports logger.ts
-// Try multiple path variations to ensure we catch all imports
-mock.module('src/utils/logger.ts', () => ({
-	logger: createMockLogger()
-}));
+// Use absolute path like the other setup file does
+const loggerMock = { logger: createMockLogger() };
+const loggerPath = process.cwd() + '/src/utils/logger.ts';
+const loggerServerPath = process.cwd() + '/src/utils/logger.server.ts';
 
-mock.module('./src/utils/logger.ts', () => ({
-	logger: createMockLogger()
-}));
+// Mock using absolute paths (most reliable)
+mock.module(loggerPath, () => loggerMock);
+mock.module(loggerServerPath, () => loggerMock);
 
-mock.module('../src/utils/logger.ts', () => ({
-	logger: createMockLogger()
-}));
+// Also try relative paths and aliases
+mock.module('src/utils/logger.ts', () => loggerMock);
+mock.module('./src/utils/logger.ts', () => loggerMock);
+mock.module('../src/utils/logger.ts', () => loggerMock);
 
 // Mock logger.ts using @utils/logger alias
 mock.module('@utils/logger', () => ({

@@ -131,11 +131,9 @@ async function testMongoDbConnection(dbConfig: DatabaseConfig) {
 	const { buildDatabaseConnectionString } = importedUtils;
 	const connectionString = buildDatabaseConnectionString(dbConfig);
 	const isAtlas = connectionString.startsWith('mongodb+srv://');
-	const options = {
-		user: dbConfig.user || undefined,
-		pass: dbConfig.password || undefined,
+	// Only include auth options if credentials are provided
+	const options: Record<string, unknown> = {
 		dbName: dbConfig.name,
-		authSource: isAtlas ? 'admin' : 'admin',
 		retryWrites: true,
 		serverSelectionTimeoutMS: DB_TIMEOUT,
 		maxPoolSize: 1,
@@ -144,6 +142,13 @@ async function testMongoDbConnection(dbConfig: DatabaseConfig) {
 			tlsAllowInvalidCertificates: false
 		})
 	};
+
+	// Only add auth options if both user and password are provided
+	if (dbConfig.user && dbConfig.password) {
+		options.user = dbConfig.user;
+		options.pass = dbConfig.password;
+		options.authSource = 'admin';
+	}
 	let conn;
 	const warnings: string[] = [];
 	let authenticatedUsers: Array<{ user: string; db: string }> = [];
