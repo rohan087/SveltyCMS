@@ -244,7 +244,9 @@ mock.module('@src/stores/loadingStore.svelte', () => {
 // Mock screenSizeStore.svelte.ts to prevent $state error
 mock.module('@src/stores/screenSizeStore.svelte', () => {
 	const ScreenSize = { XS: 'XS', SM: 'SM', MD: 'MD', LG: 'LG', XL: 'XL', XXL: '2XL' };
-	const getScreenSizeName = (width: number): string => {
+
+	// Export getScreenSize function (not getScreenSizeName)
+	const getScreenSize = (width: number): typeof ScreenSize[keyof typeof ScreenSize] => {
 		if (width < 640) return ScreenSize.XS;
 		if (width < 768) return ScreenSize.SM;
 		if (width < 1024) return ScreenSize.MD;
@@ -255,6 +257,7 @@ mock.module('@src/stores/screenSizeStore.svelte', () => {
 
 	return {
 		ScreenSize,
+		getScreenSize,
 		screenWidth: { value: 1024 },
 		screenHeight: { value: 768 },
 		screenSize: { value: 'LG' },
@@ -263,6 +266,14 @@ mock.module('@src/stores/screenSizeStore.svelte', () => {
 		isDesktop: { value: true },
 		isLargeScreen: { value: false },
 		setupScreenSizeListener: () => () => {},
-		getScreenSizeName
+		screen: {
+			width: 1024,
+			height: 768,
+			size: 'LG',
+			isMobile: false,
+			isTablet: false,
+			isDesktop: true,
+			isLargeScreen: false
+		}
 	};
 });
